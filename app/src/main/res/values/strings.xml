@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TextCaptureDemo</string>
+
+    <string name="assist_desc">Text Capture</string>
+</resources>
