@@ -1,11 +1,7 @@
 package com.yueban.textcapturedemo
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Point
-import android.graphics.Rect
+import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
@@ -25,18 +21,24 @@ class HierarchyView(context: Context, attrs: AttributeSet?) : View(context, attr
     init {
         strokePaint.style = Paint.Style.STROKE
         strokePaint.strokeWidth = 2F
-        strokePaint.color = Color.GREEN
         contentPaint.color = Color.argb(15, 0, 0, 0)
     }
 
     fun getSelectedNode(): AccessibilityNodeInfo? = selectedNode
 
     fun setSelectedNode(
-        selectedNode: AccessibilityNodeInfo?, dragPoint: Point
+            selectedNode: AccessibilityNodeInfo?, dragPoint: Point
     ) {
         this.selectedNode = selectedNode
         this.dragPoint = dragPoint
         visibility = VISIBLE
+        selectedNode?.let {
+            if (AssistUtil.isWechatMsgNode(it)) {
+                strokePaint.color = Color.GREEN
+            } else {
+                strokePaint.color = Color.RED
+            }
+        }
         invalidate()
     }
 

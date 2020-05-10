@@ -3,30 +3,45 @@ package com.yueban.textcapturedemo
 import android.accessibilityservice.AccessibilityService
 import android.graphics.Point
 import android.graphics.Rect
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.text.TextUtils
 import android.view.View
+import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.Toast
 import com.lzf.easyfloat.EasyFloat
-import java.util.ArrayList
+import java.util.*
 
 /**
  * @author yueban fbzhh007@gmail.com
  * @date 2020-01-12
  */
 class AssistDragDelegate private constructor(service: AccessibilityService) : SelectionFloatWindowCallback {
+    private val mService: AccessibilityService = service
+    private val mMainHandler = Handler(Looper.getMainLooper())
+
     /**
      * 存储当前屏幕内所有文本 node
      */
     private val mNodeInfos: MutableList<AccessibilityNodeInfo> = ArrayList()
-    private val mService: AccessibilityService = service
+
+    /**
+     * 准备读取微信文字预览页内容
+     */
+    private var mPendingPreview: Boolean = false
+
     /**
      * 悬浮球
      */
     private var mLogoView: View? = null
+
     /**
      * 文本框高亮绘制
      */
     private var mHierarchyView: HierarchyView? = null
+
     /**
      * 正在拖拽
      */
@@ -43,6 +58,33 @@ class AssistDragDelegate private constructor(service: AccessibilityService) : Se
 
     override fun onSelectionWindowCreated(hierarchyView: HierarchyView) {
         mHierarchyView = hierarchyView
+    }
+
+    /**
+     * 屏幕 window 内容变化事件
+     */
+    fun onTypeWindowStateChanged(event: AccessibilityEvent) {
+        val className = event.className
+        if (!TextUtils.isEmpty(className) && className.toString() == AssistUtil.CLASS_NAME_WECHAT_TEXT_PREVIEW) {
+            if (mPendingPreview) {
+                AssistUtil.getWechatPreviewTextNode(mService.rootInActiveWindow, object : PreviewTextNodeCallback {
+                    override fun onFound(nodeInfo: AccessibilityNodeInfo?) {
+                        nodeInfo?.let {
+                            val rect = Rect()
+                            it.getBoundsInScreen(rect)
+                            val point = Point(rect.centerX(), rect.centerY())
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                mMainHandler.postDelayed({
+                                    AssistUtil.simulateClick(mService, point)
+                                    executeSelectNode(it)
+                                }, 50)
+                            }
+                        }
+                    }
+                })
+            }
+            mPendingPreview = false
+        }
     }
 
     /**
@@ -121,6 +163,23 @@ class AssistDragDelegate private constructor(service: AccessibilityService) : Se
      * @param selectedNode 选中的节点
      */
     private fun executeSelectNode(selectedNode: AccessibilityNodeInfo) {
+        if (AssistUtil.isWechatMsgNode(selectedNode)) {
+            val rect = Rect()
+            selectedNode.getBoundsInScreen(rect)
+            val point = Point(rect.centerX(), rect.centerY())
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                mMainHandler.postDelayed(Runnable {
+                    AssistUtil.simulateClick(mService, point)
+                }, 100)
+                mMainHandler.postDelayed(Runnable {
+                    AssistUtil.simulateClick(mService, point)
+                    mPendingPreview = true
+                }, 200)
+            }
+            return
+        }
+
         val text = selectedNode.text
         Toast.makeText(MyApp.context, "text: $text", Toast.LENGTH_SHORT).show()
     }

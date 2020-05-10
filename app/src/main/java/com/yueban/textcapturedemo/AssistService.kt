@@ -2,6 +2,7 @@ package com.yueban.textcapturedemo
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.text.TextUtils
 import android.view.MotionEvent
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
@@ -28,6 +29,12 @@ class AssistService : AccessibilityService(), FloatWindowCallback {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        if (TextUtils.isEmpty(event.packageName)) {
+            return;
+        }
+        when (event.eventType) {
+            AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> mAssistDragDelegate?.onTypeWindowStateChanged(event)
+        }
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
